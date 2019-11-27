@@ -10,7 +10,6 @@ from PIL import Image
 from nengo_extras.data import load_mnist
 from nengo_extras.vision import Gabor, Mask
 from nengo_extras.gui import image_display_function
-from nengo_fpga.networks import FpgaPesEnsembleNetwork
 
 
 # ------ MISC HELPER FUNCTIONS -----
@@ -50,28 +49,12 @@ rng = np.random.RandomState(9)
 # Load the MNIST data
 (X_train, y_train), (X_test, y_test) = load_mnist()
 
+
 X_train = 2 * X_train - 1  # normalize to -1 to 1
 X_test = 2 * X_test - 1  # normalize to -1 to 1
 
 # Get information about the image
 im_size = int(np.sqrt(X_train.shape[1]))  # Dimension of 1 side of the image
-
-# Resize the images
-reduction_factor = 2
-if reduction_factor > 1:
-    im_size_new = int(im_size // reduction_factor)
-
-    X_train_resized = np.zeros((X_train.shape[0], im_size_new ** 2))
-    for i in range(X_train.shape[0]):
-        X_train_resized[i, :] = resize_img(X_train[i], im_size, im_size_new)
-    X_train = X_train_resized
-
-    X_test_resized = np.zeros((X_test.shape[0], im_size_new ** 2))
-    for i in range(X_test.shape[0]):
-        X_test_resized[i, :] = resize_img(X_test[i], im_size, im_size_new)
-    X_test = X_test_resized
-
-    im_size = im_size_new
 
 # Generate the MNIST training and test data
 train_targets = one_hot(y_train, 10)
@@ -83,6 +66,8 @@ n_out = train_targets.shape[1]  # Number of output classes
 n_hid = 16000 // (im_size ** 2)  # Number of neurons to use
 # Note: the number of neurons to use is limited such that NxD <= 16000,
 #       where D = im_size * im_size, and N is the number of neurons to use
+n_hid = 500
+print("Num hidden neurons: ", n_hid)
 gabor_size = (int(im_size / 2.5), int(im_size / 2.5))  # Size of the gabor filt
 
 # Generate the encoders for the neural ensemble
@@ -91,12 +76,12 @@ encoders = Mask((im_size, im_size)).populate(encoders, rng=rng, flatten=True)
 
 # Ensemble parameters
 max_firing_rates = 100
-ens_neuron_type = nengo.neurons.RectifiedLinear()
+ens_neuron_type = nengo.neurons.LIF()
 ens_intercepts = nengo.dists.Choice([-0.5])
 ens_max_rates = nengo.dists.Choice([max_firing_rates])
 
 # Output connection parameters
-conn_synapse = None
+conn_synapse = 0.1
 conn_eval_points = X_train
 conn_function = train_targets
 conn_solver = nengo.solvers.LstsqL2(reg=0.01)
@@ -110,35 +95,28 @@ with nengo.Network(seed=3) as model:
     input_node = nengo.Node(
         nengo.processes.PresentInput(X_test, presentation_time), label="input"
     )
-
-    # Ensemble to run on the FPGA. This ensemble is non-adaptive and just
-    # uses the encoders and decoders to perform the image classification
-    ens = FpgaPesEnsembleNetwork(
-        board,
-        n_neurons=n_hid,
-        dimensions=n_vis,
-        learning_rate=0,
-        function=conn_function,
-        eval_points=conn_eval_points,
-        label="output class",
-    )
-
-    # Set custom ensemble parameters for the FPGA Ensemble Network
-    ens.ensemble.neuron_type = ens_neuron_type
-    ens.ensemble.intercepts = ens_intercepts
-    ens.ensemble.max_rates = ens_max_rates
-    ens.ensemble.encoders = encoders
-
-    # Set custom connection parameters for the FPGA Ensemble Network
-    ens.connection.synapse = conn_synapse
-    ens.connection.solver = conn_solver
-
+    # Error node
+    error = nengo.Node(size_in=n_out, label="error")
     # Output display node
     output_node = nengo.Node(size_in=n_out, label="output class")
 
-    # Projections to and from the fpga ensemble
-    nengo.Connection(input_node, ens.input, synapse=None)
-    nengo.Connection(ens.output, output_node, synapse=None)
+    
+    ensemble = nengo.Ensemble(n_neurons=n_hid, dimensions=n_vis, neuron_type=ens_neuron_type,
+                        encoders=encoders, intercepts=ens_intercepts,
+                        max_rates=ens_max_rates, eval_points=conn_eval_points)
+                        
+    nengo.Connection(input_node, ensemble, synapse=None)
+    
+    conn = nengo.Connection(ensemble, output_node, function=conn_function, 
+                        eval_points=conn_eval_points,
+                        learning_rule_type=nengo.PES(learning_rate=0),
+                        solver=conn_solver,
+                        synapse=conn_synapse)
+    
+    nengo.Connection(error, conn.learning_rule, synapse=None)
+
+    # Projections to and from the ensemble
+    #nengo.Connection(post, output_node, synapse=None)
 
     # Input image display (for nengo_gui)
     image_shape = (1, im_size, im_size)
@@ -170,3 +148,4 @@ with nengo.Network(seed=3) as model:
     with config:
         output_spa = nengo.spa.State(len(vocab_names), subdimensions=n_out, vocab=vocab)
     nengo.Connection(output_node, output_spa.input)
+print("Done building")
