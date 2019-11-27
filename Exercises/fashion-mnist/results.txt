@@ -1,0 +1,42 @@
+CSNN + Dropout 	--acc--> 0.8944999969005585 --loss--> 0.5123407751321792
+CSNN	 	--acc--> 0.875		    --loss--> 0.5117711097002029
+FCSNN + Dropout --acc--> 0.8391000044345855 --loss--> 0.8681136417388916
+
+CSNN + Dropout
+timesteps = 2   --> Acc = 0.6277000033855438
+timesteps = 3	--> Acc = 0.7351999974250794
+timesteps = 4	--> Acc = 0.8394000041484833
+timesteps = 5   --> Acc = 0.8669000029563904
+timesteps = 8	--> Acc = 0.8776000034809113
+timesteps = 10  --> Acc = 0.8776999974250793
+timesteps = 20  --> Acc = 0.8711000037193298
+timesteps = 30  --> Acc = 0.8748999989032745
+timesteps = 50  --> Acc = 0.8864000010490417
+timesteps = 100 --> Acc = 0.8944999969005585 
+timesteps = 200 --> Acc = 0.8963999998569488
+
+CSNN
+timesteps = 2   --> Acc = 0.69450000166893
+timesteps = 3	--> Acc = 0.801399997472763
+timesteps = 4	--> Acc = 0.8412999999523163
+timesteps = 5   --> Acc = 0.8583000004291534
+timesteps = 8	--> Acc = 0.8714000010490417
+timesteps = 10  --> Acc = 0.8737000012397766
+timesteps = 20  --> Acc = 0.8720000004768371
+timesteps = 30  --> Acc = 0.8704000008106232
+timesteps = 50  --> Acc = 0.8744999980926513
+timesteps = 100 --> Acc = 0.875
+timesteps = 200 --> Acc = 0.8768999993801116
+
+FCSNN + Dropout
+timesteps = 2   --> Acc = 0.315100000500679
+timesteps = 3	--> Acc = 0.28299999952316285
+timesteps = 4	--> Acc = 0.6464999961853027
+timesteps = 5   --> Acc = 0.6684999990463257
+timesteps = 8	--> Acc = 0.7974999976158142
+timesteps = 10  --> Acc = 0.8156000006198884
+timesteps = 20  --> Acc = 0.836599999666214
+timesteps = 30  --> Acc = 0.8360000050067902
+timesteps = 50  --> Acc = 0.8394000053405761
+timesteps = 100 --> Acc = 0.8391000044345855
+timesteps = 200 --> Acc = 0.8390000033378601

@@ -1,3 +1,26 @@
+def load_mnist_local(path, kind='train'):
+    import os
+    import gzip
+    import numpy as np
+
+    """Load MNIST data from `path`"""
+    labels_path = os.path.join(path,
+                               '%s-labels-idx1-ubyte.gz'
+                               % kind)
+    images_path = os.path.join(path,
+                               '%s-images-idx3-ubyte.gz'
+                               % kind)
+
+    with gzip.open(labels_path, 'rb') as lbpath:
+        labels = np.frombuffer(lbpath.read(), dtype=np.uint8,
+                               offset=8)
+
+    with gzip.open(images_path, 'rb') as imgpath:
+        images = np.frombuffer(imgpath.read(), dtype=np.uint8,
+                               offset=16).reshape(len(labels), 784)
+
+    return images, labels
+
 # pylint: disable=redefined-outer-name
 
 import logging
@@ -6,7 +29,8 @@ import nengo
 
 # Requires python image library: pip install pillow
 from PIL import Image
-
+#from tensorflow.keras.datasets.fashion_mnist import load_data
+#from tensorflow.keras.datasets.mnist import load_data
 from nengo_extras.data import load_mnist
 from nengo_extras.vision import Gabor, Mask
 from nengo_extras.gui import image_display_function
@@ -48,7 +72,19 @@ logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
 rng = np.random.RandomState(9)
 
 # Load the MNIST data
-(X_train, y_train), (X_test, y_test) = load_mnist()
+X_train, y_train = load_mnist_local(path='fashion/', kind='train')
+X_test, y_test = load_mnist_local(path='fashion/', kind='t10k')
+
+X_train = X_train / 255.0
+X_test = X_test / 255.0
+
+#(X_train, y_train), (X_test, y_test) = load_data()
+
+#X_train = X_train.reshape(X_train.shape[0], -1) / 255.0
+#X_test = X_test.reshape(X_test.shape[0], -1) / 255.0
+
+print(X_train.shape)
+print(y_train.shape)
 
 X_train = 2 * X_train - 1  # normalize to -1 to 1
 X_test = 2 * X_test - 1  # normalize to -1 to 1
