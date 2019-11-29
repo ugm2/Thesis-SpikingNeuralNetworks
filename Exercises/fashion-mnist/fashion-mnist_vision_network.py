@@ -14,7 +14,6 @@ import tensorflow as tf
 from tensorflow.keras.utils import to_categorical
 
 # Set the nengo logging level to 'info' to display all of the information
-# coming back over the ssh connection.
 logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
 
 # Set the rng state (using a fixed seed that works)
@@ -39,10 +38,9 @@ test_targets = to_categorical(y_test)
 # Set up the vision network parameters
 n_vis = X_train.shape[1]  # Number of training samples
 n_out = train_targets.shape[1]  # Number of output classes
-#n_hid = 16000 // (im_size ** 2)  # Number of neurons to use
-# Note: the number of neurons to use is limited such that NxD <= 16000,
-#       where D = im_size * im_size, and N is the number of neurons to use
-n_hid = 500
+print("n_out: ", n_out)
+# Number of neurons to use
+n_hid = 1500
 print("Num hidden neurons: ", n_hid)
 gabor_size = (int(im_size / 2.5), int(im_size / 2.5))  # Size of the gabor filt
 
@@ -67,7 +65,7 @@ presentation_time = 0.25
 
 # Nengo model proper
 with nengo.Network(seed=3) as model:
-    # Visual input (the MNIST images) to the network
+    # Visual input to the network
     input_node = nengo.Node(
         nengo.processes.PresentInput(X_test, presentation_time), label="input"
     )
@@ -90,11 +88,6 @@ with nengo.Network(seed=3) as model:
                         synapse=conn_synapse)
     
     nengo.Connection(error, conn.learning_rule, synapse=None)
-    
-    #nengo.Connection(ensemble, error, transform=-1)
-
-    # Projections to and from the ensemble
-    #nengo.Connection(post, output_node, synapse=None)
 
     # Input image display (for nengo_gui)
     image_shape = (1, im_size, im_size)
@@ -126,4 +119,18 @@ with nengo.Network(seed=3) as model:
     with config:
         output_spa = nengo.spa.State(len(vocab_names), subdimensions=n_out, vocab=vocab)
     nengo.Connection(output_node, output_spa.input)
+    
+    confidence_node = nengo.Node(size_in=n_out, label="Confidence")
+    nengo.Connection(output_spa.output, confidence_node)
+    
+    true_output = nengo.Node(
+        nengo.processes.PresentInput(test_targets, presentation_time),  label="true_output"
+    )
+    config = nengo.Config(nengo.Ensemble)
+    config[nengo.Ensemble].neuron_type = nengo.Direct()
+    with config:
+        true_output_spa = nengo.spa.State(len(vocab_names), subdimensions=n_out, vocab=vocab)
+    
+    nengo.Connection(true_output, true_output_spa.input)
+    
 print("Done building")
