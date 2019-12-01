@@ -1,0 +1,10 @@
+name: nengo_env
+dependencies:
+  - python=3.7.4
+  - matplotlib
+  - pillow
+  - pip:
+    - nengo
+    - nengo-gui
+    - nengo-extras
+    - tensorflow # Install tensorflow-gpu if you want to run Nengo with GPU
